@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poké-Dashboard</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <div class="aero-container">
+        <!-- Header con efecto cristal -->
+        <header class="aero-header glass-panel">
+            <h1 class="aero-title">Poké-Dashboard</h1>
+            <div class="aero-shine-line"></div>
+            <p class="aero-subtitle">Primera Generación</p>
+        </header>
+
+        <!-- Contenedor principal -->
+        <main>
+            <div id="pokedex-grid" class="pokedex-container">
+                <!-- Contenido dinámico -->
+            </div>
+        </main>
+
+        <!-- Footer con efecto cristal -->
+        <footer class="aero-footer glass-panel">
+            <div class="aero-shine-line"></div>
+            <p>Un proyecto de portfolio. Creado con FastAPI y mucho 💙</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+
+    <!-- Estructura de la carta Pokémon (template de referencia, generada en app.js) -->
+    <template id="pokemon-card-template">
+        <article class="pokemon-card">
+            <!-- Capas de la Pokébola y efectos -->
+            <div class="pokeball-top"></div>
+            <div class="pokeball-bottom"></div>
+            <div class="pokeball-divider"></div>
+            <div class="pokeball-button"></div>
+            <div class="card-reflection"></div>
+
+            <!-- Contenido del Pokémon (posicionado con CSS) -->
+            <div class="sprite-container">
+                <img src="..." alt="..." class="pokemon-sprite">
+            </div>
+            
+            <h2 class="pokemon-name">Pokemon Name</h2>
+            <span class="pokemon-number">#001</span>
+            <div class="types-container">
+                <!-- <span class="type-badge ...">Type 1</span> -->
+            </div>
+        </article>
+    </template>
+</body>
+</html>

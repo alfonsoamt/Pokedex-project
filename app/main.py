@@ -1,15 +1,25 @@
-from  fastapi import FastAPI
-from .api.routers import pokemon_endpoints
+# En app/main.py
 
+from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+import httpx
+
+# Importa tu router de la API
+from app.api.routers import pokemon_endpoints
+
+# --- CONFIGURACIÓN ---
 app = FastAPI()
 
+# Montamos archivos estáticos
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Definimos templates
+templates = Jinja2Templates(directory="templates")
+
+# Incluimos el router
 app.include_router(pokemon_endpoints.router)
 
 @app.get("/")
-async def root():
-    """
-    Root endpoint to check if the API is running.
-    Returns:
-        dict: A message indicating that the API is running.
-    """
-    return {"message": "PokeAPI is running!"}
+async def serve_home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
