@@ -1,50 +1,22 @@
-// Esperamos a que el DOM esté completamente cargado para empezar a trabajar.
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Referencias a elementos del DOM ---
-    // Guardamos una referencia al contenedor donde pintaremos las tarjetas.
+    // --- DOM References ---
     const pokedexGrid = document.getElementById('pokedex-grid');
-    
-    // --- Constantes y Configuración ---
-    // ¡CAMBIO CLAVE #1!
-    // Ahora apuntamos al nuevo y potente endpoint que nos da todo de una vez.
-    const API_URL = '/generation/1';
-    const POKEMON_PER_BATCH = 12; // Número de Pokémon por lote
-    const BATCH_DELAY = 300; // Milisegundos entre lotes
-    const BATCH_SIZE = 12;
-    let currentStartId = 1;
+    const prevPageBtn = document.getElementById('prev-page-btn');
+    const nextPageBtn = document.getElementById('next-page-btn');
+    const pageIndicator = document.getElementById('page-indicator');
+
+    // --- State Variables ---
+    let currentPage = 1;
+    let totalPages = 1;
     let isLoading = false;
-    const MAX_POKEMON = 151; // Primera generación
+    let currentEventSource = null; // To hold the active stream connection
+    const POKEMONS_PER_PAGE = 21;
 
-    /**
-     * Obtiene la lista completa de Pokémon de nuestro backend.
-     * Esta función hace UNA SOLA petición de red.
-     */
-    const fetchFirstGeneration = async () => {
-        try {
-            // Hacemos el fetch a nuestro endpoint de lote.
-            const response = await fetch(API_URL);
-            if (!response.ok) {
-                // Si el backend devuelve un error (ej. 500), lo capturamos.
-                throw new Error(`Error del servidor: ${response.status}`);
-            }
-            // El backend nos devuelve un array de objetos Pokémon, listo para usar.
-            return await response.json();
-        } catch (error) {
-            console.error("Falló la obtención de la primera generación:", error);
-            pokedexGrid.innerHTML = `<p class="error-message">Error al cargar los datos. El servidor puede estar ocupado.</p>`;
-            return []; // Devolvemos un array vacío para no romper el resto del código.
-        }
-    };
-
-    /**
-     * ¡REUTILIZACIÓN DE CÓDIGO!
-     * Esta función NO CAMBIA. Sigue siendo la misma porque su única
-     * responsabilidad es tomar UN objeto Pokémon y convertirlo en HTML.
-     * Es modular y reutilizable, una excelente práctica de diseño.
-     * @param {object} pokemon - El objeto de un Pokémon.
-     * @returns {string} - El string HTML de la tarjeta.
-     */
     const createPokemonCard = (pokemon) => {
+        if (!pokemon || !pokemon.types) {
+            console.error('Invalid pokemon data received:', pokemon);
+            return ''; // Return an empty string if data is invalid
+        }
         const typesHtml = pokemon.types.map(type => 
             `<span class="type-badge type-${type.toLowerCase()}">${type}</span>`
         ).join('');
@@ -56,131 +28,118 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="pokeball-bottom"></div>
                 <div class="pokeball-divider"></div>
                 <div class="pokeball-button"></div>
-                
                 <div class="sprite-container">
-                    <img 
-                        src="${pokemon.sprite}" 
-                        alt="${pokemon.name}" 
-                        class="pokemon-sprite"
-                        loading="lazy"
-                    >
+                    <img src="${pokemon.sprite}" alt="${pokemon.name}" class="pokemon-sprite" loading="lazy">
                 </div>
-                
                 <span class="pokemon-number">#${String(pokemon.id).padStart(3, '0')}</span>
-
-                <!-- Panel de Información para agrupar nombre y tipos -->
                 <div class="info-panel">
                     <h2 class="pokemon-name">${pokemon.name}</h2>
-                    <div class="types-container">
-                        ${typesHtml}
-                    </div>
+                    <div class="types-container">${typesHtml}</div>
                 </div>
             </article>
         `;
     };
 
-    const createLoadingSpinner = () => `
-        <div class="aero-loading">
-            <div class="aero-spinner"></div>
-            <p class="loading-text">Cargando Pokémon...</p>
-        </div>
-    `;
+    const createSkeletonGrid = () => {
+        const skeletonHTML = Array.from({ length: POKEMONS_PER_PAGE })
+            .map(() => `<div class="pokemon-card-skeleton"></div>`)
+            .join('');
+        pokedexGrid.innerHTML = skeletonHTML;
+    };
 
     const apply3DEffect = (card) => {
         const handleMove = (e) => {
             const rect = card.getBoundingClientRect();
             const x = (e.clientX - rect.left) / rect.width - 0.5;
             const y = (e.clientY - rect.top) / rect.height - 0.5;
-            
-            const rotateX = y * 10;
-            const rotateY = -x * 10;
-            
-            card.style.transform = `
-                perspective(1000px)
-                scale(1.02)
-                rotateX(${rotateX}deg)
-                rotateY(${rotateY}deg)
-            `;
-
-            // Ajustar reflejo según posición del mouse
-            const reflection = card.querySelector('.card-reflection');
-            if (reflection) {
-                reflection.style.opacity = 0.5 + (y * 0.3);
-            }
+            card.style.transform = `perspective(1000px) scale(1.02) rotateX(${y * 10}deg) rotateY(${-x * 10}deg)`;
         };
-
-        const handleLeave = () => {
-            card.style.transform = '';
-            const reflection = card.querySelector('.card-reflection');
-            if (reflection) {
-                reflection.style.opacity = 0.7;
-            }
-        };
-
+        const handleLeave = () => { card.style.transform = ''; };
         card.addEventListener('mousemove', handleMove);
         card.addEventListener('mouseleave', handleLeave);
     };
 
-    const applyCardAnimations = () => {
-        const cards = document.querySelectorAll('.pokemon-card');
-        cards.forEach((card, index) => {
-            card.style.setProperty('--card-index', index % BATCH_SIZE);
-            card.classList.add('card-entrance');
-            apply3DEffect(card);
-        });
+    const updatePaginationControls = (paginationData) => {
+        totalPages = paginationData.total_pages;
+        currentPage = paginationData.current_page;
+        pageIndicator.textContent = `Página ${currentPage} de ${totalPages}`;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
     };
 
-    const loadNextBatch = async () => {
-        if (isLoading || currentStartId > MAX_POKEMON) return;
-        
+    const streamAndDisplayPokemons = (page) => {
+        if (isLoading) {
+            currentEventSource?.close(); // Close any existing stream
+        }
         isLoading = true;
-        
-        if (currentStartId === 1) {
-            pokedexGrid.innerHTML = createLoadingSpinner();
-        }
+        let cardIndex = 0;
 
-        try {
-            const response = await fetch(`/api/pokemon/batch?start=${currentStartId}&count=${BATCH_SIZE}`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
-            const pokemonBatch = await response.json();
-            
-            if (pokemonBatch.length === 0) {
-                if (currentStartId === 1) {
-                    pokedexGrid.innerHTML = '<div class="aero-error">No se encontraron Pokémon</div>';
+        createSkeletonGrid();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const url = `/api/pokemons/stream?page=${page}&limit=${POKEMONS_PER_PAGE}`;
+        currentEventSource = new EventSource(url);
+
+        let isFirstPokemon = true;
+
+        currentEventSource.onmessage = function(event) {
+            const eventData = JSON.parse(event.data);
+
+            if (eventData.type === 'pagination') {
+                updatePaginationControls(eventData.data);
+            } else if (eventData.type === 'pokemon') {
+                if (isFirstPokemon) {
+                    pokedexGrid.innerHTML = ''; // Clear skeletons on first pokemon arrival
+                    isFirstPokemon = false;
                 }
-                return;
-            }
 
-            const batchHTML = pokemonBatch.map(createPokemonCard).join('');
-            
-            if (currentStartId === 1) {
-                pokedexGrid.innerHTML = batchHTML;
-            } else {
-                pokedexGrid.insertAdjacentHTML('beforeend', batchHTML);
-            }
+                if (eventData.data.error) {
+                    console.error("Error with Pokémon data:", eventData.data.error);
+                    return; // Skip rendering this card
+                }
 
-            applyCardAnimations();
-            currentStartId += pokemonBatch.length;
+                const cardHTML = createPokemonCard(eventData.data);
+                const cardElement = document.createElement('div');
+                cardElement.innerHTML = cardHTML;
+                const newCard = cardElement.firstElementChild;
 
-            if (currentStartId <= MAX_POKEMON) {
-                setTimeout(() => loadNextBatch(), 300);
+                if (newCard) {
+                    pokedexGrid.appendChild(newCard);
+                    newCard.style.setProperty('--card-index', cardIndex++);
+                    newCard.classList.add('card-entrance');
+                    apply3DEffect(newCard);
+                }
+            } else if (eventData.type === 'done') {
+                // Stream finished successfully, close the connection gracefully
+                currentEventSource.close();
+                isLoading = false;
             }
-        } catch (error) {
-            console.error('Error:', error);
-            if (currentStartId === 1) {
-                pokedexGrid.innerHTML = `
-                    <div class="aero-error">
-                        <p>Error al cargar los Pokémon</p>
-                        <button class="aero-button" onclick="location.reload()">Reintentar</button>
-                    </div>
-                `;
+        };
+
+        currentEventSource.onerror = function(error) {
+            // This will now only fire on actual network errors, not on stream completion
+            console.error('EventSource failed:', error);
+            if (isLoading) { // Avoid showing error if connection was closed intentionally
+                pokedexGrid.innerHTML = `<div class="aero-error"><p>Error de conexión. Intente de nuevo.</p></div>`;
             }
-        } finally {
+            currentEventSource.close();
             isLoading = false;
-        }
+        };
     };
 
-    // Iniciar la carga
-    loadNextBatch();
+    // --- Event Listeners ---
+    prevPageBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            streamAndDisplayPokemons(currentPage - 1);
+        }
+    });
+
+    nextPageBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            streamAndDisplayPokemons(currentPage + 1);
+        }
+    });
+
+    // --- Initial Load ---
+    streamAndDisplayPokemons(currentPage);
 });

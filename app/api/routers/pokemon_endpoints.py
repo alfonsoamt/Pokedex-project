@@ -1,17 +1,18 @@
 from fastapi import APIRouter, Query
-from typing import List, Dict
+from fastapi.responses import StreamingResponse
 from app.api.services import pokemon_service
+import json
 
 router = APIRouter(prefix="/api")
 
-@router.get("/generation/{gen_id}")
-async def get_pokemon_generation(gen_id: int):
-    """Get all Pokemon from a specific generation"""
-    start_id = 1
-    count = 151 if gen_id == 1 else 0  # For now, only handling gen 1
-    return await pokemon_service.get_pokemon_batch(start_id, count)
+async def sse_generator(page: int, limit: int):
+    """Generator that yields Server-Sent Events."""
+    async for item in pokemon_service.get_streamed_pokemons(page=page, limit=limit):
+        yield f"data: {json.dumps(item)}\n\n"
 
-@router.get("/pokemon/batch")
-async def get_pokemon_batch(start: int = Query(1), count: int = Query(12)):
-    """Get a batch of Pokemon"""
-    return await pokemon_service.get_pokemon_batch(start, count)
+@router.get("/pokemons/stream")
+async def stream_pokemons(page: int = Query(1, ge=1), limit: int = Query(21, ge=1, le=100)):
+    """
+    Streams a paginated list of Pokemon using Server-Sent Events.
+    """
+    return StreamingResponse(sse_generator(page, limit), media_type="text/event-stream")
