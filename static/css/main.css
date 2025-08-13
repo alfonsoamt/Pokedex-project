@@ -230,10 +230,10 @@ body::before {
 
 /* --- Filter Controls --- */
 .filter-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.8rem;
+    display: flex; /* Use Flexbox for layout */
+    flex-direction: column; /* Stack items vertically */
+    align-items: center; /* Center items horizontally */
+    gap: 1.5rem; /* Gap between the stacked filter sections */
     margin-bottom: 2.5rem;
     padding: 1rem;
     background: rgba(0, 0, 0, 0.1);
@@ -247,6 +247,45 @@ body::before {
     animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
 }
 
+#type-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+#generation-filter-container {
+    flex-shrink: 0; /* Prevent the dropdown from shrinking */
+}
+
+.aero-select {
+    padding: 0.6em 1.4em;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white; /* Ensure text is always visible */
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+    padding-right: 3rem; /* Make space for arrow */
+}
+
+.aero-select option {
+    background-color: #012D3B; /* Dark background for options */
+    color: white;
+}
+
+.aero-select:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
 .type-filter-btn {
     padding: 0.6em 1.4em;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -256,12 +295,10 @@ body::before {
     cursor: pointer;
     transition: all 0.3s ease;
     text-transform: capitalize;
-    /* --- NEW: Inactive buttons are dimmed --- */
     opacity: 0.65;
     filter: saturate(0.8);
 }
 
-/* --- NEW: Assign background color by default --- */
 .type-filter-btn.type-normal { background-color: var(--type-glass-normal); }
 .type-filter-btn.type-fire { background-color: var(--type-glass-fire); }
 .type-filter-btn.type-water { background-color: var(--type-glass-water); }
@@ -286,7 +323,6 @@ body::before {
     transform: translateY(-2px);
 }
 
-/* --- NEW: Active state is bright and glowing --- */
 .type-filter-btn.active {
     opacity: 1;
     filter: saturate(1);
@@ -295,7 +331,6 @@ body::before {
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.8);
 }
 
-/* Shake animation for feedback */
 @keyframes shake {
     10%, 90% { transform: translate3d(-1px, 0, 0); }
     20%, 80% { transform: translate3d(2px, 0, 0); }

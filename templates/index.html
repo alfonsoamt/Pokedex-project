@@ -19,14 +19,22 @@
         <header class="aero-header glass-panel">
             <h1 class="aero-title">Poké-Dashboard</h1>
             <div class="aero-shine-line"></div>
-            <p class="aero-subtitle">Primera Generación</p>
+            <p class="aero-subtitle">Explora el Mundo Pokémon</p>
         </header>
 
         <!-- Contenedor principal -->
         <main>
             <div id="filter-container" class="filter-container">
-                <button id="see-all-btn" class="type-filter-btn active" data-type="all">See All</button>
-                <!-- Type buttons will be injected here by JS -->
+                <div id="generation-filter-container">
+                    <select id="generation-select" class="aero-select">
+                        <option value="all">All Generations</option>
+                        <!-- Generation options will be injected here by JS -->
+                    </select>
+                </div>
+                <div id="type-filters">
+                    <button id="see-all-btn" class="type-filter-btn active" data-type="all">See All</button>
+                    <!-- Type buttons will be injected here by JS -->
+                </div>
             </div>
             <div id="pokedex-grid" class="pokedex-container">
                 <!-- Contenido dinámico -->

@@ -1,17 +1,18 @@
 import httpx
 import asyncio
 import math
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional, Set
 from cachetools import TTLCache
 
 # --- Cache Setup ---
 pokemon_cache = TTLCache(maxsize=1024, ttl=3600)
 
+# --- Service Helper Functions ---
+
 async def get_pokemon_basic_info(pokemon_id: int) -> Dict:
     """Get basic info for a single Pokemon, using a cache."""
     if pokemon_id in pokemon_cache:
         return pokemon_cache[pokemon_id]
-
     url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_id}"
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
@@ -27,81 +28,69 @@ async def get_pokemon_basic_info(pokemon_id: int) -> Dict:
             pokemon_cache[pokemon_id] = pokemon_data
             return pokemon_data
         except Exception as e:
-            print(f"Error for pokemon {pokemon_id}: {e}")
+            
             return {"error": f"Data not available for Pokémon {pokemon_id}"}
 
-async def get_streamed_pokemons(page: int, limit: int, types: Optional[List[str]] = None) -> AsyncGenerator[Dict, None]:
-    """
-    Streams Pokémon data, sending pagination info first, then each Pokémon individually.
-    Dispatches to the correct fetcher based on whether types are provided.
-    """
-    if not types:
-        stream = _get_all_pokemons(page, limit)
-    elif len(types) == 1:
-        stream = _get_pokemons_by_type(types[0], page, limit)
-    elif len(types) >= 2:
-        # Handles two types, ignores any more than two for now.
-        stream = _get_pokemons_by_two_types(types[0], types[1], page, limit)
-    
-    async for item in stream:
-        yield item
+def _get_id_from_url(url: str) -> int:
+    """Extracts a numeric ID from a PokeAPI URL."""
+    return int(url.split("/")[-2])
 
-async def _get_all_pokemons(page: int, limit: int) -> AsyncGenerator[Dict, None]:
-    """Streams all Pokémon, paginated."""
-    offset = (page - 1) * limit
-    total_items = 1025
-    total_pages = math.ceil(total_items / limit)
-
-    yield {
-        "type": "pagination",
-        "data": {
-            "total_items": total_items,
-            "total_pages": total_pages,
-            "current_page": page
-        }
-    }
-
-    if offset >= total_items:
-        return
-
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            list_url = f"https://pokeapi.co/api/v2/pokemon?limit={limit}&offset={offset}"
-            response = await client.get(list_url)
-            response.raise_for_status()
-            pokemon_results = response.json().get("results", [])
-
-            for p in pokemon_results:
-                pokemon_id = int(p["url"].split("/")[-2])
-                if pokemon_id > total_items:
-                    continue
-                
-                pokemon_data = await get_pokemon_basic_info(pokemon_id)
-                yield {"type": "pokemon", "data": pokemon_data}
-            
-            yield {"type": "done", "data": {"message": "Stream complete"}}
-
-        except Exception as e:
-            print(f"Error streaming pokemon list: {e}")
-            yield {"type": "error", "data": {"message": str(e)}}
-
-async def _fetch_pokemon_list_by_type(type_name: str, client: httpx.AsyncClient) -> List[str]:
-    """Fetches a list of Pokémon names for a given type."""
+async def _fetch_pokemon_ids_by_type(type_name: str, client: httpx.AsyncClient) -> Set[int]:
+    """Fetches a set of Pokémon IDs for a given type."""
     type_url = f"https://pokeapi.co/api/v2/type/{type_name.lower()}"
     response = await client.get(type_url)
     response.raise_for_status()
     data = response.json()
-    return [p["pokemon"]["url"] for p in data["pokemon"]]
+    return {_get_id_from_url(p["pokemon"]["url"]) for p in data["pokemon"]}
 
-async def _get_pokemons_by_type(type_name: str, page: int, limit: int) -> AsyncGenerator[Dict, None]:
-    """Streams Pokémon of a specific type, paginated."""
+async def _fetch_pokemon_ids_by_generation(gen_id: int, client: httpx.AsyncClient) -> Set[int]:
+    """Fetches a set of Pokémon IDs for a given generation."""
+    gen_url = f"https://pokeapi.co/api/v2/generation/{gen_id}"
+    response = await client.get(gen_url)
+    response.raise_for_status()
+    data = response.json()
+    return {_get_id_from_url(spec["url"]) for spec in data["pokemon_species"]}
+
+# --- Main Service Function ---
+
+async def get_streamed_pokemons(page: int, limit: int, types: Optional[List[str]] = None, generation: Optional[int] = None) -> AsyncGenerator[Dict, None]:
+    """
+    Streams Pokémon data, applying filters by type and/or generation.
+    """
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            pokemon_urls = await _fetch_pokemon_list_by_type(type_name, client)
+        paginated_ids = []
+        total_items = 0
 
-        total_items = len(pokemon_urls)
-        total_pages = math.ceil(total_items / limit)
-        offset = (page - 1) * limit
+        if not types and not generation:
+            # --- NO FILTERS --- #
+            total_items = 1025
+            offset = (page - 1) * limit
+            list_url = f"https://pokeapi.co/api/v2/pokemon?limit={limit}&offset={offset}"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(list_url)
+                response.raise_for_status()
+                paginated_ids = [_get_id_from_url(p["url"]) for p in response.json().get("results", [])]
+        else:
+            # --- FILTERS APPLIED --- #
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                tasks = []
+                if types:
+                    for type_name in types[:2]:
+                        tasks.append(_fetch_pokemon_ids_by_type(type_name, client))
+                if generation:
+                    tasks.append(_fetch_pokemon_ids_by_generation(generation, client))
+                
+                if tasks:
+                    results = await asyncio.gather(*tasks)
+                    intersected_ids = set.intersection(*results)
+                    final_ids = sorted(list(intersected_ids))
+                    total_items = len(final_ids)
+                    
+                    # Manual pagination on the final ID list
+                    offset = (page - 1) * limit
+                    paginated_ids = final_ids[offset:offset + limit]
+
+        total_pages = math.ceil(total_items / limit) if total_items > 0 else 1
 
         yield {
             "type": "pagination",
@@ -112,73 +101,47 @@ async def _get_pokemons_by_type(type_name: str, page: int, limit: int) -> AsyncG
             }
         }
 
-        paginated_urls = pokemon_urls[offset:offset + limit]
-
-        for url in paginated_urls:
-            pokemon_id = int(url.split("/")[-2])
-            if pokemon_id > 1025:
-                continue
+        for pokemon_id in paginated_ids:
+            if pokemon_id > 1025: continue
             pokemon_data = await get_pokemon_basic_info(pokemon_id)
             yield {"type": "pokemon", "data": pokemon_data}
 
         yield {"type": "done", "data": {"message": "Stream complete"}}
 
     except Exception as e:
-        print(f"Error streaming pokemon by type: {e}")
+        
         yield {"type": "error", "data": {"message": str(e)}}
 
-async def _get_pokemons_by_two_types(type1: str, type2: str, page: int, limit: int) -> AsyncGenerator[Dict, None]:
-    """Streams Pokémon that have BOTH of the two specified types, paginated."""
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Fetch both lists concurrently
-            task1 = _fetch_pokemon_list_by_type(type1, client)
-            task2 = _fetch_pokemon_list_by_type(type2, client)
-            results = await asyncio.gather(task1, task2)
-            
-            # Find the intersection of the two lists
-            intersection_urls = set(results[0]).intersection(set(results[1]))
-            pokemon_urls = sorted(list(intersection_urls), key=lambda url: int(url.split("/")[-2]))
-
-        total_items = len(pokemon_urls)
-        total_pages = math.ceil(total_items / limit)
-        offset = (page - 1) * limit
-
-        yield {
-            "type": "pagination",
-            "data": {
-                "total_items": total_items,
-                "total_pages": total_pages,
-                "current_page": page
-            }
-        }
-
-        paginated_urls = pokemon_urls[offset:offset + limit]
-
-        for url in paginated_urls:
-            pokemon_id = int(url.split("/")[-2])
-            if pokemon_id > 1025:
-                continue
-            pokemon_data = await get_pokemon_basic_info(pokemon_id)
-            yield {"type": "pokemon", "data": pokemon_data}
-
-        yield {"type": "done", "data": {"message": "Stream complete"}}
-
-    except Exception as e:
-        print(f"Error streaming pokemon by two types: {e}")
-        yield {"type": "error", "data": {"message": str(e)}}
+# --- API Data Fetchers ---
 
 async def get_all_types() -> List[str]:
     """Fetches a list of all official Pokémon type names."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # The main type endpoint lists all types
             response = await client.get("https://pokeapi.co/api/v2/type")
             response.raise_for_status()
             data = response.json()
-            # We exclude 'unknown', 'shadow' and 'stellar' as they are special cases
             type_names = [t["name"] for t in data["results"] if t["name"] not in ["unknown", "shadow", "stellar"]]
             return type_names
     except Exception as e:
-        print(f"Error fetching all types: {e}")
+        
+        return []
+
+async def get_all_generations() -> List[Dict]:
+    """Fetches a list of all official Pokémon generations."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get("https://pokeapi.co/api/v2/generation")
+            response.raise_for_status()
+            data = response.json()
+            generation_list = [
+                {
+                    "id": int(g["url"].split("/")[-2]),
+                    "name": g["name"].replace("generation-", "").upper()
+                }
+                for g in data["results"]
+            ]
+            return generation_list
+    except Exception as e:
+        
         return []

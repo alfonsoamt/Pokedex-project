@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevPageBtn = document.getElementById('prev-page-btn');
     const nextPageBtn = document.getElementById('next-page-btn');
     const pageIndicator = document.getElementById('page-indicator');
-    const filterContainer = document.getElementById('filter-container');
+    const typeFilterContainer = document.getElementById('type-filters');
+    const generationSelect = document.getElementById('generation-select');
 
     // --- State Variables ---
     let currentPage = 1;
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isLoading = false;
     let currentEventSource = null;
     let selectedTypes = [];
+    let selectedGeneration = 'all';
     const POKEMONS_PER_PAGE = 21;
 
     const createPokemonCard = (pokemon) => {
@@ -19,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Invalid pokemon data received:', pokemon);
             return '';
         }
-        const typesHtml = pokemon.types.map(type => 
+        const typesHtml = pokemon.types.map(type =>
             `<span class="type-badge type-${type.toLowerCase()}">${type}</span>`
         ).join('');
 
@@ -69,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nextPageBtn.disabled = currentPage === totalPages;
     };
 
-    const streamAndDisplayPokemons = (page, types = []) => {
+    const streamAndDisplayPokemons = (page, types = [], generation = 'all') => {
         if (isLoading) {
             currentEventSource?.close();
         }
@@ -84,11 +86,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const typeParams = types.map(t => `types=${t}`).join('&');
             url += `&${typeParams}`;
         }
-        
+        if (generation !== 'all' && generation !== null && generation !== undefined && generation !== '') {
+            url += `&generation=${encodeURIComponent(generation)}`;
+        }
+
         currentEventSource = new EventSource(url);
         let isFirstPokemon = true;
 
-        currentEventSource.onmessage = function(event) {
+        currentEventSource.onmessage = function (event) {
             const eventData = JSON.parse(event.data);
 
             if (eventData.type === 'pagination') {
@@ -113,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     apply3DEffect(newCard);
                 }
             } else if (eventData.type === 'done') {
-                if (isFirstPokemon) { // Handle case where no pokemon are returned
+                if (isFirstPokemon) {
                     pokedexGrid.innerHTML = `<div class="grid-message"><p>No Pokémon match the selected filters.</p></div>`;
                     isFirstPokemon = false;
                 }
@@ -122,10 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        currentEventSource.onerror = function(error) {
+        currentEventSource.onerror = function (error) {
             console.error('EventSource failed:', error);
             if (isLoading) {
-                pokedexGrid.innerHTML = `<div class="aero-error"><p>Error de conexión. Intente de nuevo.</p></div>`;
+                pokedexGrid.innerHTML = `<div class="grid-message"><p>Error de conexión. Intente de nuevo.</p></div>`;
             }
             currentEventSource.close();
             isLoading = false;
@@ -133,8 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const triggerShake = () => {
-        filterContainer.classList.add('shake');
-        setTimeout(() => filterContainer.classList.remove('shake'), 500);
+        typeFilterContainer.parentElement.classList.add('shake');
+        setTimeout(() => typeFilterContainer.parentElement.classList.remove('shake'), 500);
     };
 
     const handleFilterClick = (event) => {
@@ -142,11 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!button) return;
 
         const type = button.dataset.type;
-        const seeAllButton = filterContainer.querySelector('[data-type="all"]');
+        const seeAllButton = typeFilterContainer.querySelector('[data-type="all"]');
 
         if (type === 'all') {
             selectedTypes = [];
-            filterContainer.querySelectorAll('.type-filter-btn.active').forEach(btn => btn.classList.remove('active'));
+            typeFilterContainer.querySelectorAll('.type-filter-btn.active').forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
         } else {
             seeAllButton.classList.remove('active');
@@ -168,12 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 seeAllButton.classList.add('active');
             }
         }
-        // Reset to page 1 and fetch new data only if selection changed
-        if (button.dataset.type !== 'all' && selectedTypes.length >= 2 && selectedTypes.indexOf(type) === -1) {
-            // Do not fetch if user tried to select a 3rd type
-        } else {
-            streamAndDisplayPokemons(1, selectedTypes);
-        }
+        streamAndDisplayPokemons(1, selectedTypes, selectedGeneration);
     };
 
     const populateTypeFilters = async () => {
@@ -181,37 +181,58 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/types');
             if (!response.ok) throw new Error('Failed to fetch types');
             const types = await response.json();
-            
+
             types.forEach(type => {
                 const button = document.createElement('button');
-                // NEW: Always add the specific type class for coloring
                 button.className = `type-filter-btn type-${type.toLowerCase()}`;
                 button.dataset.type = type;
                 button.textContent = type;
-                filterContainer.appendChild(button);
+                typeFilterContainer.appendChild(button);
             });
         } catch (error) {
             console.error('Could not populate type filters:', error);
-            filterContainer.innerHTML += '<p class="aero-error">Could not load filters.</p>';
+        }
+    };
+
+    const populateGenerationFilter = async () => {
+        try {
+            const response = await fetch('/api/generations');
+            if (!response.ok) throw new Error('Failed to fetch generations');
+            const generations = await response.json();
+
+            generations.forEach(gen => {
+                const option = document.createElement('option');
+                option.value = gen.id;
+                option.textContent = `Generation ${gen.name}`;
+                generationSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Could not populate generation filter:', error);
         }
     };
 
     // --- Event Listeners ---
     prevPageBtn.addEventListener('click', () => {
         if (currentPage > 1) {
-            streamAndDisplayPokemons(currentPage - 1, selectedTypes);
+            streamAndDisplayPokemons(currentPage - 1, selectedTypes, selectedGeneration);
         }
     });
 
     nextPageBtn.addEventListener('click', () => {
         if (currentPage < totalPages) {
-            streamAndDisplayPokemons(currentPage + 1, selectedTypes);
+            streamAndDisplayPokemons(currentPage + 1, selectedTypes, selectedGeneration);
         }
     });
 
-    filterContainer.addEventListener('click', handleFilterClick);
+    typeFilterContainer.addEventListener('click', handleFilterClick);
+
+    generationSelect.addEventListener('change', (event) => {
+        selectedGeneration = event.target.value;
+        streamAndDisplayPokemons(1, selectedTypes, selectedGeneration);
+    });
 
     // --- Initial Load ---
     populateTypeFilters();
-    streamAndDisplayPokemons(1, selectedTypes);
+    populateGenerationFilter();
+    streamAndDisplayPokemons(1, selectedTypes, selectedGeneration);
 });

@@ -8,6 +8,8 @@ import httpx
 # Importa tu router de la API
 from app.api.routers import pokemon_endpoints
 
+
+
 # --- CONFIGURACIÓN ---
 app = FastAPI()
 
