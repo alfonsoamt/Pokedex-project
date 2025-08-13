@@ -4,18 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevPageBtn = document.getElementById('prev-page-btn');
     const nextPageBtn = document.getElementById('next-page-btn');
     const pageIndicator = document.getElementById('page-indicator');
+    const filterContainer = document.getElementById('filter-container');
 
     // --- State Variables ---
     let currentPage = 1;
     let totalPages = 1;
     let isLoading = false;
-    let currentEventSource = null; // To hold the active stream connection
+    let currentEventSource = null;
+    let selectedTypes = [];
     const POKEMONS_PER_PAGE = 21;
 
     const createPokemonCard = (pokemon) => {
         if (!pokemon || !pokemon.types) {
             console.error('Invalid pokemon data received:', pokemon);
-            return ''; // Return an empty string if data is invalid
+            return '';
         }
         const typesHtml = pokemon.types.map(type => 
             `<span class="type-badge type-${type.toLowerCase()}">${type}</span>`
@@ -67,9 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
         nextPageBtn.disabled = currentPage === totalPages;
     };
 
-    const streamAndDisplayPokemons = (page) => {
+    const streamAndDisplayPokemons = (page, types = []) => {
         if (isLoading) {
-            currentEventSource?.close(); // Close any existing stream
+            currentEventSource?.close();
         }
         isLoading = true;
         let cardIndex = 0;
@@ -77,9 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
         createSkeletonGrid();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        const url = `/api/pokemons/stream?page=${page}&limit=${POKEMONS_PER_PAGE}`;
+        let url = `/api/pokemons/stream?page=${page}&limit=${POKEMONS_PER_PAGE}`;
+        if (types.length > 0) {
+            const typeParams = types.map(t => `types=${t}`).join('&');
+            url += `&${typeParams}`;
+        }
+        
         currentEventSource = new EventSource(url);
-
         let isFirstPokemon = true;
 
         currentEventSource.onmessage = function(event) {
@@ -89,20 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 updatePaginationControls(eventData.data);
             } else if (eventData.type === 'pokemon') {
                 if (isFirstPokemon) {
-                    pokedexGrid.innerHTML = ''; // Clear skeletons on first pokemon arrival
+                    pokedexGrid.innerHTML = '';
                     isFirstPokemon = false;
                 }
-
                 if (eventData.data.error) {
                     console.error("Error with Pokémon data:", eventData.data.error);
-                    return; // Skip rendering this card
+                    return;
                 }
-
                 const cardHTML = createPokemonCard(eventData.data);
                 const cardElement = document.createElement('div');
                 cardElement.innerHTML = cardHTML;
                 const newCard = cardElement.firstElementChild;
-
                 if (newCard) {
                     pokedexGrid.appendChild(newCard);
                     newCard.style.setProperty('--card-index', cardIndex++);
@@ -110,16 +113,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     apply3DEffect(newCard);
                 }
             } else if (eventData.type === 'done') {
-                // Stream finished successfully, close the connection gracefully
+                if (isFirstPokemon) { // Handle case where no pokemon are returned
+                    pokedexGrid.innerHTML = `<div class="grid-message"><p>No Pokémon match the selected filters.</p></div>`;
+                    isFirstPokemon = false;
+                }
                 currentEventSource.close();
                 isLoading = false;
             }
         };
 
         currentEventSource.onerror = function(error) {
-            // This will now only fire on actual network errors, not on stream completion
             console.error('EventSource failed:', error);
-            if (isLoading) { // Avoid showing error if connection was closed intentionally
+            if (isLoading) {
                 pokedexGrid.innerHTML = `<div class="aero-error"><p>Error de conexión. Intente de nuevo.</p></div>`;
             }
             currentEventSource.close();
@@ -127,19 +132,86 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
+    const triggerShake = () => {
+        filterContainer.classList.add('shake');
+        setTimeout(() => filterContainer.classList.remove('shake'), 500);
+    };
+
+    const handleFilterClick = (event) => {
+        const button = event.target.closest('.type-filter-btn');
+        if (!button) return;
+
+        const type = button.dataset.type;
+        const seeAllButton = filterContainer.querySelector('[data-type="all"]');
+
+        if (type === 'all') {
+            selectedTypes = [];
+            filterContainer.querySelectorAll('.type-filter-btn.active').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+        } else {
+            seeAllButton.classList.remove('active');
+            const index = selectedTypes.indexOf(type);
+
+            if (index > -1) {
+                selectedTypes.splice(index, 1);
+                button.classList.remove('active');
+            } else {
+                if (selectedTypes.length < 2) {
+                    selectedTypes.push(type);
+                    button.classList.add('active');
+                } else {
+                    triggerShake();
+                }
+            }
+
+            if (selectedTypes.length === 0) {
+                seeAllButton.classList.add('active');
+            }
+        }
+        // Reset to page 1 and fetch new data only if selection changed
+        if (button.dataset.type !== 'all' && selectedTypes.length >= 2 && selectedTypes.indexOf(type) === -1) {
+            // Do not fetch if user tried to select a 3rd type
+        } else {
+            streamAndDisplayPokemons(1, selectedTypes);
+        }
+    };
+
+    const populateTypeFilters = async () => {
+        try {
+            const response = await fetch('/api/types');
+            if (!response.ok) throw new Error('Failed to fetch types');
+            const types = await response.json();
+            
+            types.forEach(type => {
+                const button = document.createElement('button');
+                // NEW: Always add the specific type class for coloring
+                button.className = `type-filter-btn type-${type.toLowerCase()}`;
+                button.dataset.type = type;
+                button.textContent = type;
+                filterContainer.appendChild(button);
+            });
+        } catch (error) {
+            console.error('Could not populate type filters:', error);
+            filterContainer.innerHTML += '<p class="aero-error">Could not load filters.</p>';
+        }
+    };
+
     // --- Event Listeners ---
     prevPageBtn.addEventListener('click', () => {
         if (currentPage > 1) {
-            streamAndDisplayPokemons(currentPage - 1);
+            streamAndDisplayPokemons(currentPage - 1, selectedTypes);
         }
     });
 
     nextPageBtn.addEventListener('click', () => {
         if (currentPage < totalPages) {
-            streamAndDisplayPokemons(currentPage + 1);
+            streamAndDisplayPokemons(currentPage + 1, selectedTypes);
         }
     });
 
+    filterContainer.addEventListener('click', handleFilterClick);
+
     // --- Initial Load ---
-    streamAndDisplayPokemons(currentPage);
+    populateTypeFilters();
+    streamAndDisplayPokemons(1, selectedTypes);
 });

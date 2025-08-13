@@ -227,3 +227,101 @@ body::before {
     .pokemon-card { width: 100%; height: auto; padding-bottom: 100%; } 
     .aero-title { font-size: 2.2rem; } 
 }
+
+/* --- Filter Controls --- */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-bottom: 2.5rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+}
+
+.filter-container.shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.type-filter-btn {
+    padding: 0.6em 1.4em;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: capitalize;
+    /* --- NEW: Inactive buttons are dimmed --- */
+    opacity: 0.65;
+    filter: saturate(0.8);
+}
+
+/* --- NEW: Assign background color by default --- */
+.type-filter-btn.type-normal { background-color: var(--type-glass-normal); }
+.type-filter-btn.type-fire { background-color: var(--type-glass-fire); }
+.type-filter-btn.type-water { background-color: var(--type-glass-water); }
+.type-filter-btn.type-grass { background-color: var(--type-glass-grass); }
+.type-filter-btn.type-electric { background-color: var(--type-glass-electric); }
+.type-filter-btn.type-ice { background-color: var(--type-glass-ice); }
+.type-filter-btn.type-fighting { background-color: var(--type-glass-fighting); }
+.type-filter-btn.type-poison { background-color: var(--type-glass-poison); }
+.type-filter-btn.type-ground { background-color: var(--type-glass-ground); }
+.type-filter-btn.type-flying { background-color: var(--type-glass-flying); }
+.type-filter-btn.type-psychic { background-color: var(--type-glass-psychic); }
+.type-filter-btn.type-bug { background-color: var(--type-glass-bug); }
+.type-filter-btn.type-rock { background-color: var(--type-glass-rock); }
+.type-filter-btn.type-ghost { background-color: var(--type-glass-ghost); }
+.type-filter-btn.type-dragon { background-color: var(--type-glass-dragon); }
+.type-filter-btn.type-dark { background-color: var(--type-glass-dark); }
+.type-filter-btn.type-steel { background-color: var(--type-glass-steel); }
+.type-filter-btn.type-fairy { background-color: var(--type-glass-fairy); }
+
+.type-filter-btn:hover:not(.active) {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+/* --- NEW: Active state is bright and glowing --- */
+.type-filter-btn.active {
+    opacity: 1;
+    filter: saturate(1);
+    font-weight: 700;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Shake animation for feedback */
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* --- Special button styles --- */
+#see-all-btn {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+#see-all-btn.active {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Grid Messages (No results, errors) --- */
+.grid-message {
+    grid-column: 1 / -1; /* Span all columns */
+    text-align: center;
+    padding: 3rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
