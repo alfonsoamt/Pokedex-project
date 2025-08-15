@@ -19,17 +19,24 @@
         <header class="aero-header glass-panel">
             <h1 class="aero-title">Poké-Dashboard</h1>
             <div class="aero-shine-line"></div>
-            <p class="aero-subtitle">Explora el Mundo Pokémon</p>
         </header>
 
         <!-- Contenedor principal -->
         <main>
             <div id="filter-container" class="filter-container">
-                <div id="generation-filter-container">
-                    <select id="generation-select" class="aero-select">
-                        <option value="all">All Generations</option>
-                        <!-- Generation options will be injected here by JS -->
-                    </select>
+                <div class="search-container">
+                    <input type="text" id="pokemon-search" placeholder="Buscar Pokémon..." class="aero-input">
+                    <button id="surprise-me-btn" class="aero-button" title="Get 3 random Pokémon">Random Explore</button>
+                    <div id="autocomplete-suggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <div id="generation-filter-container" class="custom-select-container">
+                    <div id="generation-select" class="aero-select" tabindex="0">
+                        <span class="selected-value">All Generations</span>
+                        <svg class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                    <div id="generation-options" class="aero-options">
+                        <!-- Opciones de generación se inyectan aquí -->
+                    </div>
                 </div>
                 <div id="type-filters">
                     <button id="see-all-btn" class="type-filter-btn active" data-type="all">See All</button>

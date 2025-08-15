@@ -7,6 +7,44 @@ from cachetools import TTLCache
 # --- Cache Setup ---
 pokemon_cache = TTLCache(maxsize=1024, ttl=3600)
 
+# Cache for all Pokémon names for autocomplete
+_all_pokemon_names: List[Dict] = []
+
+async def _fetch_all_pokemon_names():
+    """Fetches all Pokémon names and their IDs for autocomplete caching."""
+    global _all_pokemon_names
+    if not _all_pokemon_names:
+        url = "https://pokeapi.co/api/v2/pokemon?limit=10000" # Fetch all known Pokémon
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json()
+                _all_pokemon_names = [
+                    {"name": p["name"], "id": int(p["url"].split("/")[-2])}
+                    for p in data["results"]
+                ]
+            except Exception as e:
+                # Log the error, but don't fail the app startup
+                print(f"Error fetching all pokemon names for autocomplete: {e}")
+
+async def get_pokemon_names_by_partial_match(query: str) -> List[Dict]:
+    """Returns a list of Pokémon names and IDs that partially match the query."""
+    if not _all_pokemon_names:
+        await _fetch_all_pokemon_names() # Ensure names are loaded
+
+    if not query: # If query is empty, return nothing
+        return []
+
+    query_lower = query.lower()
+    matches = []
+    for pokemon in _all_pokemon_names:
+        if query_lower in pokemon["name"].lower():
+            matches.append(pokemon)
+        if len(matches) >= 10: # Limit suggestions to 10
+            break
+    return matches
+
 # --- Service Helper Functions ---
 
 async def get_pokemon_basic_info(pokemon_id: int) -> Dict:
@@ -27,7 +65,7 @@ async def get_pokemon_basic_info(pokemon_id: int) -> Dict:
             }
             pokemon_cache[pokemon_id] = pokemon_data
             return pokemon_data
-        except Exception as e:
+        except Exception:
             
             return {"error": f"Data not available for Pokémon {pokemon_id}"}
 
@@ -53,11 +91,33 @@ async def _fetch_pokemon_ids_by_generation(gen_id: int, client: httpx.AsyncClien
 
 # --- Main Service Function ---
 
-async def get_streamed_pokemons(page: int, limit: int, types: Optional[List[str]] = None, generation: Optional[int] = None) -> AsyncGenerator[Dict, None]:
+async def get_streamed_pokemons(page: int, limit: int, types: Optional[List[str]] = None, generation: Optional[int] = None, pokemon_id: Optional[int] = None, pokemon_ids: Optional[List[int]] = None) -> AsyncGenerator[Dict, None]:
     """
-    Streams Pokémon data, applying filters by type and/or generation.
+    Streams Pokémon data, applying filters by type and/or generation, or fetching a specific Pokémon by ID.
     """
     try:
+        if pokemon_ids:
+            # If a list of Pokémon IDs is provided, fetch only those
+            total_items = len(pokemon_ids)
+            yield {"type": "pagination", "data": {"total_items": total_items, "total_pages": 1, "current_page": 1}}
+            for pid in pokemon_ids:
+                pokemon_data = await get_pokemon_basic_info(pid)
+                if "error" not in pokemon_data:
+                    yield {"type": "pokemon", "data": pokemon_data}
+            yield {"type": "done", "data": {"message": "Stream complete"}}
+            return
+
+        if pokemon_id:
+            # If a specific Pokémon ID is provided, fetch only that one
+            pokemon_data = await get_pokemon_basic_info(pokemon_id)
+            if "error" not in pokemon_data:
+                yield {"type": "pagination", "data": {"total_items": 1, "total_pages": 1, "current_page": 1}}
+                yield {"type": "pokemon", "data": pokemon_data}
+            else:
+                yield {"type": "error", "data": {"message": f"Pokémon with ID {pokemon_id} not found."}}
+            yield {"type": "done", "data": {"message": "Stream complete"}}
+            return
+
         paginated_ids = []
         total_items = 0
 
@@ -102,7 +162,8 @@ async def get_streamed_pokemons(page: int, limit: int, types: Optional[List[str]
         }
 
         for pokemon_id in paginated_ids:
-            if pokemon_id > 1025: continue
+            if pokemon_id > 1025:
+                continue
             pokemon_data = await get_pokemon_basic_info(pokemon_id)
             yield {"type": "pokemon", "data": pokemon_data}
 
@@ -123,7 +184,7 @@ async def get_all_types() -> List[str]:
             data = response.json()
             type_names = [t["name"] for t in data["results"] if t["name"] not in ["unknown", "shadow", "stellar"]]
             return type_names
-    except Exception as e:
+    except Exception:
         
         return []
 
@@ -142,6 +203,6 @@ async def get_all_generations() -> List[Dict]:
                 for g in data["results"]
             ]
             return generation_list
-    except Exception as e:
+    except Exception:
         
         return []
