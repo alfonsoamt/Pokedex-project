@@ -76,7 +76,7 @@ body::before {
     /* --- SOLUCIÓN: Borde de cristal --- */
     box-shadow: 0 10px 30px -10px rgba(0,0,0,0.4), inset 0 0 1px 1.5px rgba(255, 255, 255, 0.7);
     cursor: pointer;
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, opacity 0.3s ease-in-out;
 }
 
 /* --- JERARQUÍA DE CAPAS (Z-INDEX) --- */
@@ -490,11 +490,33 @@ body::before {
     font-size: 1.2rem;
     font-weight: 600;
 }
-.filter-container.filters-disabled {
-    /* No opacity here, handled by individual sections */
-}
 
 .filter-section-disabled {
     opacity: 0.5;
     /* pointer-events: none; <- This was the error, removing it */
+}
+
+.no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.no-results-img {
+    width: 150px;
+    height: auto;
+    opacity: 0.8;
+    image-rendering: pixelated; /* Keeps the pixel art sharp */
+}
+
+.no-results-text {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.no-results-text small {
+    font-size: 0.9rem;
+    opacity: 0.8;
 }

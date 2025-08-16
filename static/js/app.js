@@ -5,17 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextPageBtn = document.getElementById('next-page-btn');
     const pageIndicator = document.getElementById('page-indicator');
     const typeFilterContainer = document.getElementById('type-filters');
-    
-    // --- Custom Generation Select DOM References ---
-    const generationSelectContainer = document.getElementById('generation-select'); // This is the main clickable div
+    const generationSelectContainer = document.getElementById('generation-select');
     const generationSelectedValue = generationSelectContainer.querySelector('.selected-value');
     const generationOptionsContainer = document.getElementById('generation-options');
-
     const pokemonSearchInput = document.getElementById('pokemon-search');
     const autocompleteSuggestionsContainer = document.getElementById('autocomplete-suggestions');
-    const surpriseMeBtn = document.getElementById('surprise-me-btn'); // New button
-    const filterContainer = document.getElementById('filter-container'); // Reference to the main filter container
-    const generationFilterContainer = document.getElementById('generation-filter-container'); // New reference
+    const surpriseMeBtn = document.getElementById('surprise-me-btn');
 
     // --- State Variables ---
     let currentPage = 1;
@@ -24,8 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentEventSource = null;
     let selectedTypes = [];
     let selectedGeneration = 'all';
-    let isSearchingByName = false; // New state variable for search bar
-    let searchTimeout = null; // For debouncing
+    let isSearchingByName = false;
     const POKEMONS_PER_PAGE = 21;
 
     // --- Utility Functions ---
@@ -67,10 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const createSkeletonGrid = () => {
-        const skeletonHTML = Array.from({ length: POKEMONS_PER_PAGE })
+        pokedexGrid.innerHTML = Array.from({ length: POKEMONS_PER_PAGE })
             .map(() => `<div class="pokemon-card-skeleton"></div>`)
             .join('');
-        pokedexGrid.innerHTML = skeletonHTML;
     };
 
     const apply3DEffect = (card) => {
@@ -88,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updatePaginationControls = (paginationData) => {
         totalPages = paginationData.total_pages;
         currentPage = paginationData.current_page;
-        pageIndicator.textContent = `Página ${currentPage} de ${totalPages}`;
+        pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
         
         const disablePagination = isSearchingByName || totalPages <= 1;
         prevPageBtn.disabled = disablePagination || currentPage === 1;
@@ -96,8 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const toggleFilterControls = (disable) => {
-        // This function will now ONLY handle the visual aspect (dimming)
-        // The actual disabling logic is handled by `isSearchingByName` in each event listener
         if (disable) {
             typeFilterContainer.classList.add('filter-section-disabled');
             generationSelectContainer.parentElement.classList.add('filter-section-disabled');
@@ -107,32 +98,103 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const streamAndDisplayPokemons = (page, types = [], generation = 'all', pokemonId = null) => {
+    // --- Refactored Core Logic ---
+    const buildApiUrl = (params) => {
+        const url = new URL('/api/pokemons/stream', window.location.origin);
+        
+        if (params.pokemonIds) {
+            params.pokemonIds.forEach(id => url.searchParams.append('pokemon_ids', id));
+        } else if (params.pokemonId) {
+            url.searchParams.append('limit', 1);
+            url.searchParams.append('pokemon_id', params.pokemonId);
+        } else {
+            url.searchParams.append('page', params.page || 1);
+            url.searchParams.append('limit', POKEMONS_PER_PAGE);
+            if (params.types && params.types.length > 0) {
+                params.types.forEach(t => url.searchParams.append('types', t));
+            }
+            if (params.generation && params.generation !== 'all') {
+                url.searchParams.append('generation', params.generation);
+            }
+        }
+        return url.toString();
+    };
+
+    const streamAndDisplayPokemons = (params) => {
         if (isLoading) {
             currentEventSource?.close();
         }
         isLoading = true;
-        let cardIndex = 0;
 
-        createSkeletonGrid();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const FADE_DURATION = 200; // ms
 
-        let url;
-        if (pokemonId) {
-            url = `/api/pokemons/stream?page=1&limit=1&pokemon_id=${pokemonId}`; // Fetch only the specific pokemon
-            // Pagination controls will be disabled by updatePaginationControls
+        const existingCards = pokedexGrid.querySelectorAll('.pokemon-card');
+
+        const loadNewContent = () => {
+            let cardIndex = 0;
+            createSkeletonGrid();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            const url = buildApiUrl(params);
+            currentEventSource = new EventSource(url);
+
+            let isFirstPokemon = true;
+
+            currentEventSource.onmessage = function (event) {
+                const eventData = JSON.parse(event.data);
+
+                if (eventData.type === 'pagination') {
+                    updatePaginationControls(eventData.data);
+                } else if (eventData.type === 'pokemon') {
+                    if (isFirstPokemon) {
+                        pokedexGrid.innerHTML = '';
+                        isFirstPokemon = false;
+                    }
+                    if (eventData.data.error) {
+                        console.error("Error with Pokémon data:", eventData.data.error);
+                        return;
+                    }
+                    const cardHTML = createPokemonCard(eventData.data);
+                    const cardElement = document.createElement('div');
+                    cardElement.innerHTML = cardHTML;
+                    const newCard = cardElement.firstElementChild;
+                    if (newCard) {
+                        pokedexGrid.appendChild(newCard);
+                        newCard.style.setProperty('--card-index', cardIndex++);
+                        newCard.classList.add('card-entrance');
+                        apply3DEffect(newCard);
+                    }
+                } else if (eventData.type === 'done') {
+                    if (isFirstPokemon) {
+                        const message = isSearchingByName ? "A wild Snorlax blocked the way! <br><small>No Pokémon found with that name.</small>" : "A wild Snorlax blocked the way! <br><small>No Pokémon match the selected filters.</small>";
+                        pokedexGrid.innerHTML = `
+                            <div class="grid-message no-results">
+                                <img src="/static/img/NotResultsFound.png" alt="No results found" class="no-results-img">
+                                <p class="no-results-text">${message}</p>
+                            </div>`;
+                        isFirstPokemon = false;
+                    }
+                    currentEventSource.close();
+                    isLoading = false;
+                }
+            };
+
+            currentEventSource.onerror = function (error) {
+                console.error('EventSource failed:', error);
+                if (isLoading) {
+                    pokedexGrid.innerHTML = `<div class="grid-message"><p>Connection error. Please try again.</p></div>`;
+                }
+                currentEventSource.close();
+                isLoading = false;
+            };
+        };
+
+        if (existingCards.length > 0) {
+            existingCards.forEach(card => card.classList.add('fade-out'));
+            setTimeout(loadNewContent, FADE_DURATION);
         } else {
-            url = `/api/pokemons/stream?page=${page}&limit=${POKEMONS_PER_PAGE}`;
-            if (types.length > 0) {
-                const typeParams = types.map(t => `types=${t}`).join('&');
-                url += `&${typeParams}`;
-            }
-            if (generation !== 'all' && generation !== null && generation !== undefined && generation !== '') {
-                url += `&generation=${encodeURIComponent(generation)}`;
-            }
+            loadNewContent();
         }
-
-        currentEventSource = new EventSource(url);
         let isFirstPokemon = true;
 
         currentEventSource.onmessage = function (event) {
@@ -160,11 +222,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     apply3DEffect(newCard);
                 }
             } else if (eventData.type === 'done') {
-                if (isFirstPokemon) { // No pokemon were streamed
-                    pokedexGrid.innerHTML = `<div class="grid-message"><p>No Pokémon match the selected filters.</p></div>`;
-                    if (isSearchingByName) {
-                        pokedexGrid.innerHTML = `<div class="grid-message"><p>No Pokémon found with that name.</p></div>`;
-                    }
+                if (isFirstPokemon) {
+                    const message = isSearchingByName ? "A wild Snorlax blocked the way! <br><small>No Pokémon found with that name.</small>" : "A wild Snorlax blocked the way! <br><small>No Pokémon match the selected filters.</small>";
+                    pokedexGrid.innerHTML = `
+                        <div class="grid-message no-results">
+                            <img src="/static/img/NotResultsFound.png" alt="No results found" class="no-results-img">
+                            <p class="no-results-text">${message}</p>
+                        </div>`;
                     isFirstPokemon = false;
                 }
                 currentEventSource.close();
@@ -175,13 +239,14 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEventSource.onerror = function (error) {
             console.error('EventSource failed:', error);
             if (isLoading) {
-                pokedexGrid.innerHTML = `<div class="grid-message"><p>Error de conexión. Intente de nuevo.</p></div>`;
+                pokedexGrid.innerHTML = `<div class="grid-message"><p>Connection error. Please try again.</p></div>`;
             }
             currentEventSource.close();
             isLoading = false;
         };
     };
 
+    // --- Event Handlers and Initializers ---
     const triggerShake = () => {
         typeFilterContainer.parentElement.classList.add('shake');
         setTimeout(() => typeFilterContainer.parentElement.classList.remove('shake'), 500);
@@ -205,7 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             seeAllButton.classList.remove('active');
             const index = selectedTypes.indexOf(type);
-
             if (index > -1) {
                 selectedTypes.splice(index, 1);
                 button.classList.remove('active');
@@ -217,12 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     triggerShake();
                 }
             }
-
             if (selectedTypes.length === 0) {
                 seeAllButton.classList.add('active');
             }
         }
-        streamAndDisplayPokemons(1, selectedTypes, selectedGeneration);
+        streamAndDisplayPokemons({ page: 1, types: selectedTypes, generation: selectedGeneration });
     };
 
     const populateTypeFilters = async () => {
@@ -230,7 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/types');
             if (!response.ok) throw new Error('Failed to fetch types');
             const types = await response.json();
-
             types.forEach(type => {
                 const button = document.createElement('button');
                 button.className = `type-filter-btn type-${type.toLowerCase()}`;
@@ -249,10 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to fetch generations');
             const generations = await response.json();
 
-            // Clear previous options and add the 'All Generations' option first
             generationOptionsContainer.innerHTML = '';
             const allGenOption = document.createElement('div');
-            allGenOption.className = 'aero-option selected'; // Selected by default
+            allGenOption.className = 'aero-option selected';
             allGenOption.dataset.value = 'all';
             allGenOption.textContent = 'All Generations';
             generationOptionsContainer.appendChild(allGenOption);
@@ -269,9 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Autocomplete Logic ---
     const fetchAutocompleteSuggestions = async (query) => {
-        if (query.length < 2) { // Only search if query is at least 2 characters
+        if (query.length < 2) {
             autocompleteSuggestionsContainer.innerHTML = '';
             autocompleteSuggestionsContainer.style.display = 'none';
             return;
@@ -286,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 suggestions.forEach(pokemon => {
                     const item = document.createElement('div');
                     item.classList.add('autocomplete-suggestion-item');
-                    item.textContent = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1); // Capitalize name
+                    item.textContent = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
                     item.dataset.pokemonId = pokemon.id;
                     autocompleteSuggestionsContainer.appendChild(item);
                 });
@@ -308,17 +368,17 @@ document.addEventListener('DOMContentLoaded', () => {
             pokemonSearchInput.value = pokemonName;
             autocompleteSuggestionsContainer.style.display = 'none';
             isSearchingByName = true;
-            toggleFilterControls(true); // Disable filters
-            streamAndDisplayPokemons(1, [], [], pokemonId); // Display single pokemon
+            toggleFilterControls(true);
+            streamAndDisplayPokemons({ pokemonId: pokemonId });
         }
     };
 
     const resetSearch = () => {
         pokemonSearchInput.value = '';
         isSearchingByName = false;
-        toggleFilterControls(false); // Enable filters
+        toggleFilterControls(false);
         autocompleteSuggestionsContainer.style.display = 'none';
-        streamAndDisplayPokemons(1, selectedTypes, selectedGeneration); // Restore filtered view
+        streamAndDisplayPokemons({ page: 1, types: selectedTypes, generation: selectedGeneration });
     };
 
     // --- Event Listeners ---
@@ -328,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (currentPage > 1) {
-            streamAndDisplayPokemons(currentPage - 1, selectedTypes, selectedGeneration);
+            streamAndDisplayPokemons({ page: currentPage - 1, types: selectedTypes, generation: selectedGeneration });
         }
     });
 
@@ -338,13 +398,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (currentPage < totalPages) {
-            streamAndDisplayPokemons(currentPage + 1, selectedTypes, selectedGeneration);
+            streamAndDisplayPokemons({ page: currentPage + 1, types: selectedTypes, generation: selectedGeneration });
         }
     });
 
     typeFilterContainer.addEventListener('click', handleFilterClick);
 
-    // --- Custom Generation Select Logic ---
     generationSelectContainer.addEventListener('click', (e) => {
         if (isSearchingByName) {
             resetSearch();
@@ -358,22 +417,17 @@ document.addEventListener('DOMContentLoaded', () => {
     generationOptionsContainer.addEventListener('click', (event) => {
         const option = event.target.closest('.aero-option');
         if (option) {
-            event.stopPropagation(); // Stop event from closing the dropdown immediately
+            event.stopPropagation();
             if (isSearchingByName) {
                 resetSearch();
             }
-            
             selectedGeneration = option.dataset.value;
             generationSelectedValue.textContent = option.textContent;
-            
             generationOptionsContainer.querySelectorAll('.aero-option').forEach(opt => opt.classList.remove('selected'));
             option.classList.add('selected');
-
-            // Close dropdown after selection
             generationOptionsContainer.classList.remove('show');
             generationSelectContainer.classList.remove('open');
-
-            streamAndDisplayPokemons(1, selectedTypes, selectedGeneration);
+            streamAndDisplayPokemons({ page: 1, types: selectedTypes, generation: selectedGeneration });
         }
     });
 
@@ -392,7 +446,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Hide suggestions and custom dropdown when clicking outside
     document.addEventListener('click', (event) => {
         if (!pokemonSearchInput.contains(event.target) && !autocompleteSuggestionsContainer.contains(event.target)) {
             autocompleteSuggestionsContainer.style.display = 'none';
@@ -406,68 +459,21 @@ document.addEventListener('DOMContentLoaded', () => {
     autocompleteSuggestionsContainer.addEventListener('click', handleAutocompleteSelection);
 
     surpriseMeBtn.addEventListener('click', () => {
-        // Generate 3 unique random IDs
         const randomIds = new Set();
         while (randomIds.size < 3) {
-            const randomId = Math.floor(Math.random() * 1025) + 1;
-            randomIds.add(randomId);
+            randomIds.add(Math.floor(Math.random() * 1025) + 1);
         }
 
-        // Clear search input and disable filters
         pokemonSearchInput.value = '';
         isSearchingByName = true;
         toggleFilterControls(true);
         autocompleteSuggestionsContainer.style.display = 'none';
 
-        // Fetch the 3 random Pokémon
-        const idsArray = Array.from(randomIds);
-        const idParams = idsArray.map(id => `pokemon_ids=${id}`).join('&');
-        const url = `/api/pokemons/stream?${idParams}`;
-
-        // Close any existing stream and start a new one
-        if (isLoading) {
-            currentEventSource?.close();
-        }
-        currentEventSource = new EventSource(url);
-        
-        // Reuse the main streaming logic to display the cards
-        let isFirstPokemon = true;
-        createSkeletonGrid(); // Show skeletons while loading
-
-        currentEventSource.onmessage = function (event) {
-            const eventData = JSON.parse(event.data);
-
-            if (eventData.type === 'pagination') {
-                updatePaginationControls({ total_pages: 1, current_page: 1 }); // Override pagination
-            } else if (eventData.type === 'pokemon') {
-                if (isFirstPokemon) {
-                    pokedexGrid.innerHTML = '';
-                    isFirstPokemon = false;
-                }
-                const cardHTML = createPokemonCard(eventData.data);
-                const cardElement = document.createElement('div');
-                cardElement.innerHTML = cardHTML;
-                const newCard = cardElement.firstElementChild;
-                if (newCard) {
-                    pokedexGrid.appendChild(newCard);
-                    apply3DEffect(newCard);
-                }
-            } else if (eventData.type === 'done') {
-                currentEventSource.close();
-                isLoading = false;
-            }
-        };
-
-        currentEventSource.onerror = function (error) {
-            console.error('EventSource failed:', error);
-            pokedexGrid.innerHTML = `<div class="grid-message"><p>Error fetching random Pokémon.</p></div>`;
-            currentEventSource.close();
-            isLoading = false;
-        };
+        streamAndDisplayPokemons({ pokemonIds: Array.from(randomIds) });
     });
 
     // --- Initial Load ---
     populateTypeFilters();
     populateGenerationFilter();
-    streamAndDisplayPokemons(1, selectedTypes, selectedGeneration);
+    streamAndDisplayPokemons({ page: 1, types: selectedTypes, generation: selectedGeneration });
 });
