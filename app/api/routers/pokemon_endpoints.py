@@ -6,6 +6,11 @@ from typing import List, Optional
 
 router = APIRouter(prefix="/api")
 
+@router.get("/health")
+async def health_check():
+    """A simple health check endpoint."""
+    return JSONResponse(content={"status": "ok"})
+
 @router.get("/types")
 async def get_pokemon_types():
     """Endpoint to get a list of all Pokémon types."""
