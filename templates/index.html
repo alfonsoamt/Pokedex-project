@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poké-Dashboard</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <div class="aero-container">
+        <!-- Header con efecto cristal -->
+        <header class="aero-header glass-panel">
+            <h1 class="aero-title">Poké-Dashboard</h1>
+            <div class="aero-shine-line"></div>
+        </header>
+
+        <!-- Contenedor principal -->
+        <main>
+            <div id="filter-container" class="filter-container">
+                <div class="search-container">
+                    <input type="text" id="pokemon-search" placeholder="Search Pokémon..." class="aero-input">
+                    <button id="surprise-me-btn" class="aero-button" title="Get 3 random Pokémon">Random Explore</button>
+                    <div id="autocomplete-suggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <div id="generation-filter-container" class="custom-select-container">
+                    <div id="generation-select" class="aero-select" tabindex="0">
+                        <span class="selected-value">All Generations</span>
+                        <svg class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                    <div id="generation-options" class="aero-options">
+                        <!-- Opciones de generación se inyectan aquí -->
+                    </div>
+                </div>
+                <div id="type-filters">
+                    <button id="see-all-btn" class="type-filter-btn active" data-type="all">See All</button>
+                    <!-- Type buttons will be injected here by JS -->
+                </div>
+            </div>
+            <div id="pokedex-grid" class="pokedex-container">
+                <!-- Contenido dinámico -->
+            </div>
+        </main>
+
+        <!-- Pagination Controls -->
+        <nav class="pagination-container" aria-label="Pokedex navigation">
+            <button id="prev-page-btn" class="pagination-button" disabled>Previous</button>
+            <span id="page-indicator" class="page-indicator">Page 1 of X</span>
+            <button id="next-page-btn" class="pagination-button">Next</button>
+        </nav>
+
+        <!-- Footer con efecto cristal -->
+        <footer class="aero-footer glass-panel">
+            <div class="aero-shine-line"></div>
+            <p>A portfolio project. Made with FastAPI and lots of 💙</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+
+    <!-- Estructura de la carta Pokémon (template de referencia, generada en app.js) -->
+    <template id="pokemon-card-template">
+        <article class="pokemon-card">
+            <!-- Capas de la Pokébola y efectos -->
+            <div class="pokeball-top"></div>
+            <div class="pokeball-bottom"></div>
+            <div class="pokeball-divider"></div>
+            <div class="pokeball-button"></div>
+            <div class="card-reflection"></div>
+
+            <!-- Contenido del Pokémon (posicionado con CSS) -->
+            <div class="sprite-container">
+                <img src="..." alt="..." class="pokemon-sprite">
+            </div>
+            
+            <h2 class="pokemon-name">Pokemon Name</h2>
+            <span class="pokemon-number">#001</span>
+            <div class="types-container">
+                <!-- <span class="type-badge ...">Type 1</span> -->
+            </div>
+        </article>
+    </template>
+</body>
+</html>
