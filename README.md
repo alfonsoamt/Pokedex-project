@@ -1,82 +1,105 @@
-# Pokedex-project: Una Aplicación Full-Stack para Explorar Pokémon
+# Pokedex Project: A Decoupled Full-Stack Application
 
-Este proyecto es una aplicación interactiva de Pokedex, diseñada para explorar y gestionar información de Pokémon utilizando la [PokeAPI](https://pokeapi.co/). Su objetivo principal es servir como un proyecto práctico y funcional para profesionales de **Quality Assurance (QA)** y **Quality Engineering (QE)**, ofreciendo una base sólida para la implementación de diversas funcionalidades y la aplicación de estrategias de prueba.
+An interactive Pokedex application designed to explore Pokémon information, built with a modern, decoupled architecture. This project serves as a practical and functional platform for Quality Assurance (QA) and Quality Engineering (QE) professionals to implement features and apply testing strategies.
 
-La aplicación está construida con una arquitectura **full-stack**:
-*   **Backend:** Desarrollado en **Python** utilizando el framework **FastAPI**, encargado de la lógica de negocio, la interacción con la PokeAPI y la exposición de datos a través de una API RESTful.
-*   **Frontend:** Implementado con tecnologías web estándar: **HTML** para la estructura, **CSS** para el estilo y **JavaScript** para la interactividad y el consumo de la API del backend.
+### 🚀 Live Demo
 
-## Visión General del Proyecto
+**[Visit the live application here!](https://amt-pokedex.netlify.app/)**
 
-El desarrollo de esta Pokedex se ha planificado en etapas, cada una añadiendo capas de complejidad y funcionalidad, lo que permite un enfoque modular para el desarrollo y las pruebas.
+### ✨ Live Preview
 
-## Etapas de Desarrollo y Funcionalidades
+![Project Screenshot](Frontend/Frontend1.png)
 
-### 1. Cuadrícula Principal de Pokémon (Pokedex Grid)
+---
 
-Esta etapa se centra en la visualización fundamental de los Pokémon y la navegación básica.
+### 🛠️ Tech Stack & Tools
 
-*   **1.1 Mostrar Pokémon en una Cuadrícula:** Presentación de los Pokémon en un formato de cuadrícula visualmente atractivo y responsivo.
-*   **1.2 Implementar Paginación:** Gestión eficiente de grandes volúmenes de datos mediante paginación, permitiendo cargar Pokémon en bloques y mejorar el rendimiento. Esto es crucial para pruebas de carga y rendimiento.
-*   **1.3 Búsqueda con Autocompletado:** Funcionalidad de búsqueda que sugiere nombres de Pokémon a medida que el usuario escribe, mejorando la experiencia de usuario y facilitando las pruebas de búsqueda.
-*   **1.4 Diferentes Filtros:** Implementación de filtros por tipo, generación u otras características de Pokémon, permitiendo a los usuarios refinar su búsqueda.
-*   **1.5 "¡Sorpréndeme!":** Un botón o función que muestra un Pokémon aleatorio, ideal para explorar y para integrar con las funcionalidades de la "Carta de Detalles".
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript"/>
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5"/>
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3"/>
+  <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render"/>
+  <img src="https://img.shields.io/badge/Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify"/>
+</p>
 
-### 2. Carta de Detalles del Pokémon (Modal/Pop-up)
+---
 
-Al hacer clic en un Pokémon de la cuadrícula, se abrirá una vista detallada.
+## 🏛️ Architecture
 
-*   **2.1 Modal Pop-up con Stats Básicos:**
-    *   **2.1.1 Diseño y Estilo:** Enfocado en una interfaz de usuario limpia y atractiva para la carta de detalles.
-    *   **2.1.2 Añadir Stats Detallados:** Mostrar estadísticas clave del Pokémon (HP, Ataque, Defensa, etc.).
-*   **2.2 Añadir Habilidades del Pokémon:** Listar las habilidades únicas del Pokémon.
-*   **2.3 Mostrar Cadenas de Evolución:** Visualización de la línea evolutiva completa del Pokémon, incluyendo pre-evoluciones y evoluciones.
-*   **2.4 (Implementación Cuidadosa) Mostrar Variantes:** Posibilidad de ver versiones shiny, formas regionales, megaevoluciones u otras variantes del Pokémon, ya sea dentro del mismo modal o en una nueva pestaña. Esto requiere una gestión cuidadosa de la lógica de la PokeAPI.
+The application is built with a decoupled full-stack architecture, ensuring a clean separation of concerns between the frontend and backend.
 
-### 3. Comparador de Pokémon
+*   **Backend:** Developed in **Python** using the **FastAPI** framework. It handles all business logic, interacts with the external [PokeAPI](https://pokeapi.co/), and exposes data through a RESTful API. Deployed on **Render**.
+*   **Frontend:** A pure client-side application built with standard web technologies: **HTML** for structure, **CSS** for styling, and **JavaScript** for interactivity and consuming the backend API. Deployed on **Netlify**.
 
-Una funcionalidad para comparar dos Pokémon lado a lado.
+## ✅ Features
 
-*   **3.1 Añadir Botón de Comparador en la Carta de Detalles:** Un botón que activa el modo de comparación.
-    *   **3.1.1 Integración del Botón:** Asegurar que el botón sea accesible y funcional.
-    *   **3.1.2 Diseño de UI del Comparador:** Creación de una interfaz de usuario intuitiva para la comparación.
-*   **3.2 Agregar Segundo Pokémon para Comparar:** Permitir al usuario seleccionar un segundo Pokémon para comparar sus habilidades y/o estadísticas directamente.
+### Implemented
 
-### 4. Gestionador/Constructor de Equipos Pokémon
+-   [x] **Pokémon Grid:** Displays Pokémon in a visually appealing and responsive grid.
+-   [x] **Efficient Pagination:** Handles large amounts of data by loading Pokémon in batches via a Server-Sent Events (SSE) stream.
+-   [x] **Live Search:** A search bar with autocomplete functionality suggests Pokémon names as the user types.
+-   [x] **Dynamic Filtering:** Allows users to filter the grid by Pokémon type and generation.
+-   [x] **"Surprise Me!":** A button to display a random selection of Pokémon.
 
-Permite a los usuarios crear y gestionar equipos de Pokémon.
+### Future Roadmap
 
-*   **4.1 Botón para Añadir Pokémon a un Equipo:** Desde la carta de detalles, un botón para añadir el Pokémon actual a un equipo. Si no existe un equipo, se creará uno nuevo; si ya existe, se añadirá a uno existente.
-*   **4.2 Barra Lateral de Slots para el Equipo:** Una interfaz visual (ej. barra lateral) que muestra los slots del equipo, con un límite de 6 Pokémon.
-*   **4.3 Drag and Drop desde la Cuadrícula:** Funcionalidad de arrastrar y soltar Pokémon directamente desde la cuadrícula principal al equipo.
-*   **4.4 Botón y Confirmación para Limpiar el Equipo:** Opción para eliminar todos los Pokémon del equipo actual con una confirmación para evitar eliminaciones accidentales.
+-   [ ] **Pokémon Detail Modal:** A pop-up view with detailed stats, abilities, and evolution chains when a Pokémon is clicked.
+-   [ ] **Pokémon Comparator:** A tool to compare two Pokémon side-by-side.
+-   [ ] **Team Builder:** Allows users to create and manage a team of up to 6 Pokémon.
+-   [ ] **Team Analyzer:** Provides insights into a created team's strengths and weaknesses.
 
-### 5. Analizador de Equipo Pokémon
+<p align="center">
+  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" alt="Pokeball"/>
+  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="Bulbasaur"/>
+  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png" alt="Charmander"/>
+  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png" alt="Squirtle"/>
+  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="Pikachu"/>
+  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png" alt="Masterball"/>
+</p>
 
-Una herramienta para evaluar la composición del equipo.
+## 🛠️ Local Development Setup
 
-*   **5.1 Analizador de Equipo:** Proporciona un análisis de las habilidades, fortalezas y debilidades del equipo en conjunto, posiblemente basado en tipos, resistencias y vulnerabilidades.
+To run this project locally, you need to run the backend and frontend servers in two separate terminals.
 
-### 6. Extras y Mejoras Futuras
+**1. Run the Backend Server:**
 
-Ideas para expandir el proyecto más allá de las funcionalidades principales.
+Navigate to the project root directory and start the FastAPI server using Uvicorn.
 
-*   **6.1 Nueva Pestaña para Pokémon Favoritos/Vistos:** Una sección dedicada para que los usuarios puedan guardar o ver los Pokémon que han interactuado.
-*   **6.2 Nueva Pestaña para Equipos Guardados:** Permitir guardar y cargar diferentes configuraciones de equipos.
-*   **6.3 Versión Móvil Responsiva:** Adaptación de la interfaz de usuario para una experiencia óptima en dispositivos móviles.
+```bash
+# Installs dependencies
+pip install -r requirements.txt
 
-## Propuestas Adicionales para el Proyecto (Enfoque QA/QE)
+# Starts the API server on http://127.0.0.1:8000
+uvicorn app.main:app --reload
+```
 
-Para fortalecer aún más este proyecto como una base para QA/QE, se podrían considerar las siguientes mejoras:
+**2. Run the Frontend Server:**
 
-*   **Manejo de Errores y Feedback al Usuario:** Implementar mensajes de error claros y feedback visual para el usuario en caso de fallos en la API o en la lógica de la aplicación. Esto incluye mejorar los mensajes de "no resultados" con microcopywriting amigable y, a futuro, considerar una imagen (ej. un Snorlax bloqueando el camino) para hacerlo más atractivo.
-*   **Caché de Datos:** Para reducir la carga en la PokeAPI y mejorar el rendimiento, se podría implementar un sistema de caché (ej. con Redis o una base de datos local como SQLite) para los datos de Pokémon más consultados.
-*   **Autenticación/Perfiles de Usuario (Opcional):** Si se desea persistencia de equipos o favoritos por usuario, se podría añadir un sistema básico de autenticación.
-*   **Contenedorización (Docker):** Empaquetar la aplicación en contenedores Docker para facilitar el despliegue y asegurar un entorno consistente para desarrollo y pruebas.
-*   **Pruebas Automatizadas:**
-    *   **Backend:** Implementar pruebas unitarias y de integración para los endpoints de FastAPI y la lógica de servicio.
-    *   **Frontend:** Utilizar frameworks como Playwright o Cypress para pruebas end-to-end (E2E) que simulen interacciones de usuario.
-*   **Documentación de API:** Generar documentación interactiva para la API de FastAPI (ya incluida por defecto con Swagger/OpenAPI) y asegurar que esté actualizada.
-*   **CI/CD Básico:** Configurar un pipeline de Integración Continua/Despliegue Continuo (CI/CD) para automatizar las pruebas y el despliegue.
+The recommended way is to use the **Live Server** extension in Visual Studio Code.
 
-Este `README.md` actualizado proporciona una descripción más detallada y estructurada del proyecto, sus objetivos y las funcionalidades planificadas, además de proponer ideas para su mejora continua, especialmente desde una perspectiva de QA/QE.
+1.  Install the `Live Server` extension.
+2.  Right-click the `public/index.html` file.
+3.  Select "Open with Live Server".
+4.  Your browser will open to `http://127.0.0.1:5500` (or a similar port).
+
+Alternatively, you can use Python's built-in HTTP server. In a new terminal:
+
+```bash
+# Navigate into the public directory
+cd public
+
+# Start a simple web server on port 8081
+python -m http.server 8081
+```
+
+## 🧪 QA/QE & CI/CD Focus
+
+This project is designed to be a sandbox for testing and automation. Future goals include:
+
+*   **CI/CD Pipeline:** Set up GitHub Actions to automate testing and deployments upon pull requests and merges.
+*   **Automated Testing:**
+    *   **Backend:** Implement unit and integration tests for the FastAPI endpoints using `pytest`.
+    *   **Frontend:** Use a framework like Playwright or Cypress for end-to-end (E2E) tests that simulate user interactions.
+*   **Containerization:** Package the application with Docker to ensure a consistent environment for development and testing.
