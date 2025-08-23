@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const autocompleteSuggestionsContainer = document.getElementById('autocomplete-suggestions');
     const surpriseMeBtn = document.getElementById('surprise-me-btn');
 
+    // --- API Configuration ---
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const apiUrl = isLocal ? 'http://127.0.0.1:8000' : 'https://amt-pokedex.onrender.com';
+
     // --- State Variables ---
     let currentPage = 1;
     let totalPages = 1;
@@ -99,24 +103,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Refactored Core Logic ---
-    const buildApiUrl = (params) => {
-        const url = new URL('/api/pokemons/stream', window.location.origin);
-        
-        if (params.pokemonIds) {
-            params.pokemonIds.forEach(id => url.searchParams.append('pokemon_ids', id));
-        } else if (params.pokemonId) {
-            url.searchParams.append('limit', 1);
-            url.searchParams.append('pokemon_id', params.pokemonId);
-        } else {
-            url.searchParams.append('page', params.page || 1);
-            url.searchParams.append('limit', POKEMONS_PER_PAGE);
-            if (params.types && params.types.length > 0) {
-                params.types.forEach(t => url.searchParams.append('types', t));
+    const buildApiUrl = (endpoint, params = {}) => {
+        const url = new URL(apiUrl + endpoint);
+        Object.keys(params).forEach(key => {
+            const value = params[key];
+            if (Array.isArray(value)) {
+                value.forEach(v => url.searchParams.append(key, v));
+            } else if (value !== undefined && value !== null) {
+                url.searchParams.append(key, value);
             }
-            if (params.generation && params.generation !== 'all') {
-                url.searchParams.append('generation', params.generation);
-            }
-        }
+        });
         return url.toString();
     };
 
@@ -126,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         isLoading = true;
 
-        const FADE_DURATION = 200; // ms
+        const FADE_DURATION = 200;
 
         const existingCards = pokedexGrid.querySelectorAll('.pokemon-card');
 
@@ -135,7 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
             createSkeletonGrid();
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            const url = buildApiUrl(params);
+            const streamParams = {
+                page: params.page,
+                limit: POKEMONS_PER_PAGE,
+                types: params.types,
+                generation: (params.generation && params.generation !== 'all') ? params.generation : undefined,
+                pokemon_id: params.pokemonId,
+                pokemon_ids: params.pokemonIds
+            };
+            
+            const url = buildApiUrl('/api/pokemons/stream', streamParams);
             currentEventSource = new EventSource(url);
 
             let isFirstPokemon = true;
@@ -195,55 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             loadNewContent();
         }
-        let isFirstPokemon = true;
-
-        currentEventSource.onmessage = function (event) {
-            const eventData = JSON.parse(event.data);
-
-            if (eventData.type === 'pagination') {
-                updatePaginationControls(eventData.data);
-            } else if (eventData.type === 'pokemon') {
-                if (isFirstPokemon) {
-                    pokedexGrid.innerHTML = '';
-                    isFirstPokemon = false;
-                }
-                if (eventData.data.error) {
-                    console.error("Error with Pokémon data:", eventData.data.error);
-                    return;
-                }
-                const cardHTML = createPokemonCard(eventData.data);
-                const cardElement = document.createElement('div');
-                cardElement.innerHTML = cardHTML;
-                const newCard = cardElement.firstElementChild;
-                if (newCard) {
-                    pokedexGrid.appendChild(newCard);
-                    newCard.style.setProperty('--card-index', cardIndex++);
-                    newCard.classList.add('card-entrance');
-                    apply3DEffect(newCard);
-                }
-            } else if (eventData.type === 'done') {
-                if (isFirstPokemon) {
-                    const message = isSearchingByName ? "A wild Snorlax blocked the way! <br><small>No Pokémon found with that name.</small>" : "A wild Snorlax blocked the way! <br><small>No Pokémon match the selected filters.</small>";
-                    pokedexGrid.innerHTML = `
-                        <div class="grid-message no-results">
-                            <img src="/static/img/NotResultsFound.png" alt="No results found" class="no-results-img">
-                            <p class="no-results-text">${message}</p>
-                        </div>`;
-                    isFirstPokemon = false;
-                }
-                currentEventSource.close();
-                isLoading = false;
-            }
-        };
-
-        currentEventSource.onerror = function (error) {
-            console.error('EventSource failed:', error);
-            if (isLoading) {
-                pokedexGrid.innerHTML = `<div class="grid-message"><p>Connection error. Please try again.</p></div>`;
-            }
-            currentEventSource.close();
-            isLoading = false;
-        };
     };
 
     // --- Event Handlers and Initializers ---
@@ -290,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const populateTypeFilters = async () => {
         try {
-            const response = await fetch('/api/types');
+            const response = await fetch(buildApiUrl('/api/types'));
             if (!response.ok) throw new Error('Failed to fetch types');
             const types = await response.json();
             types.forEach(type => {
@@ -307,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const populateGenerationFilter = async () => {
         try {
-            const response = await fetch('/api/generations');
+            const response = await fetch(buildApiUrl('/api/generations'));
             if (!response.ok) throw new Error('Failed to fetch generations');
             const generations = await response.json();
 
@@ -337,7 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const response = await fetch(`/api/pokemons/names_autocomplete?query=${encodeURIComponent(query)}`);
+            const url = buildApiUrl('/api/pokemons/names_autocomplete', { query });
+            const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to fetch autocomplete suggestions');
             const suggestions = await response.json();
             
