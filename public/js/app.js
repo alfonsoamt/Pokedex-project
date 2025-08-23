@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const message = isSearchingByName ? "A wild Snorlax blocked the way! <br><small>No Pokémon found with that name.</small>" : "A wild Snorlax blocked the way! <br><small>No Pokémon match the selected filters.</small>";
                         pokedexGrid.innerHTML = `
                             <div class="grid-message no-results">
-                                <img src="/static/img/NotResultsFound.png" alt="No results found" class="no-results-img">
+                                <img src="img/NotResultsFound.png" alt="No results found" class="no-results-img">
                                 <p class="no-results-text">${message}</p>
                             </div>`;
                         isFirstPokemon = false;
