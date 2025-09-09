@@ -103,3 +103,47 @@ This project is designed to be a sandbox for testing and automation. Future goal
     *   **Backend:** Implement unit and integration tests for the FastAPI endpoints using `pytest`.
     *   **Frontend:** Use a framework like Playwright or Cypress for end-to-end (E2E) tests that simulate user interactions.
 *   **Containerization:** Package the application with Docker to ensure a consistent environment for development and testing.
+
+## 🤖 Test Automation Framework Architecture
+
+To support the project's QA/QE goals, a unified test automation framework will be developed. The architecture is designed to be robust, scalable, and maintainable, housing both API and End-to-End tests within a single, cohesive structure. This approach promotes code reuse, consistency, and consolidated reporting.
+
+### Core Technologies
+
+The framework will leverage the following industry-standard libraries:
+
+*   **Test Runner:** **Pytest** will be used as the core test runner for both API and E2E tests, enabling powerful fixtures, assertions, and plugin-based extensions.
+*   **API Testing:**
+    *   **Requests:** For making clear and simple HTTP requests to the FastAPI backend.
+    *   **Pydantic:** For rigorous data validation and contract testing, ensuring API responses match the expected schema.
+*   **End-to-End (E2E) Testing:**
+    *   **Playwright:** For reliable, modern browser automation that simulates real user interactions on the frontend.
+
+### Proposed Folder Structure
+
+The framework will follow a layered architecture to ensure a clean separation of concerns.
+
+```
+Pokedex-project/
+├── tests/
+│   ├── api/
+│   │   ├── clients/
+│   │   ├── data/
+│   │   └── models/
+│   ├── e2e/
+│   │   └── pages/
+│   └── conftest.py
+│
+├── core/
+│   ├── helpers/
+│   └── config.py
+│
+├── reports/
+└── pytest.ini
+```
+
+*   **`core/`**: Contains shared framework logic, such as environment configuration (`config.py`) and reusable helper functions (`helpers/`).
+*   **`tests/`**: The root for all test suites.
+    *   **`tests/api/`**: Holds API-specific tests, API clients (request logic), and Pydantic data models (schema validation).
+    *   **`tests/e2e/`**: Contains E2E tests and Page Object Models (`pages/`) for UI interaction.
+*   **`reports/`**: A designated output directory for test reports and artifacts.
