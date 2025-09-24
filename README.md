@@ -161,15 +161,18 @@ This section tracks the ongoing development of the test automation framework.
     *   Handled a complex Server-Sent Event (SSE) stream by implementing a **Pydantic Discriminated Union**, a robust pattern for modern, real-time APIs.
 *   **Full Coverage for Stream Endpoint via Parametrization:**
     *   **Refactored with `parametrize`:** Replaced a single, monolithic test with a powerful, parameterized test (`test_pokemon_stream_parameterized`) using `pytest.mark.parametrize`.
-    *   **Expanded Positive Coverage:** The new test covers all primary valid scenarios from the test plan (`TC-A-STR-001` to `TC-A-STR-007`), including pagination, all filter types, and fetching by ID(s).
-    *   **Implemented Data Validation:** The test suite now performs deep data assertions, ensuring the *content* of the response is correct based on the request parameters.
-    *   **Added Negative Path Testing:** Created a separate parameterized test (`test_pokemon_stream_invalid_parameters`) to verify that the API correctly rejects invalid inputs with a `422` status code (`TC-A-STR-009`).
-    *   **API Bug Fixes:** This robust testing process uncovered—and led to the fixing of—bugs in the API, which was not correctly validating certain inputs.
+    *   **Expanded Positive Coverage:** The new test covers all primary valid scenarios from the test plan (`TC-A-STR-001` to `TC-A-STR-007`).
+    *   **Implemented Data Validation & Negative Path Testing:** The test suite now performs deep data assertions and verifies that the API correctly rejects invalid inputs with a `422` status code.
+*   **E2E Framework Architecture & Unified Configuration:**
+    *   **Designed a Component-Based POM:** Architected and scaffolded a scalable E2E framework using a Page Object Model composed of smaller, reusable components (`BasePage`, `MainPokedexPage`, `PokemonGridComponent`, etc.).
+    *   **Centralized Configuration:** Implemented a `pytest.ini` file to manage configurations for both API and E2E tests, removing all hardcoded URLs from the codebase.
+    *   **Refactored API Client:** The API testing framework now reads its base URL from `pytest.ini`, making it fully configurable and environment-agnostic.
+    *   **Created E2E Concepts Documentation:** Authored a new `E2E_TESTING_CONCEPTS.md` guide explaining the new architecture and patterns.
 
 **🎯 Next Session Goal:**
 
-With the API test suite now providing robust coverage for the backend, the next major objective is to **begin the implementation of the End-to-End (E2E) test suite using Playwright**. This will shift the focus to validating user workflows directly in the browser.
+Now that the skeleton for the E2E framework is in place, the next objective is to **bring it to life by implementing the core logic**.
 
-*   **1. Setup Playwright with Pytest:** Integrate Playwright into the existing `pytest` framework. This will involve creating necessary fixtures and configurations in `conftest.py` to manage the browser lifecycle.
-*   **2. Implement First E2E Test:** Automate a critical E2E test case, such as `TC-E-GRD-001: Verify card content (sprite, name, number, types)`.
-*   **3. Develop Page Object Model (POM):** Begin creating the first Page Object Model for the main Pokedex page. This will abstract away UI selectors and actions, making the tests cleaner and more maintainable, following the proposed architecture in `tests/e2e/pages/`.
+*   **1. Implement Locators and Component Methods:** The first step is to fill in the placeholder methods in the component files (`filter_panel.py`, `pokemon_grid.py`). This involves finding the correct CSS selectors for the UI elements and writing the Playwright code to interact with them.
+*   **2. Complete the First E2E Test:** Fully implement the test case `test_initial_load_and_card_content`, including detailed assertions using Playwright's `expect` to verify that the card content is correct. The goal is to have a complete, passing E2E test.
+*   **3. Iterate on More Test Cases:** Once the first test is stable, continue the process by implementing the logic for `test_filter_by_single_type` and other key user flows.

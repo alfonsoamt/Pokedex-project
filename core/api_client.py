@@ -1,14 +1,13 @@
 import requests
 from requests import Response
-from core.config import settings
-
-
 class ApiClient:
     """A generic API client to handle HTTP requests."""
 
-    def __init__(self):
+    def __init__(self, base_url: str):
         """Initializes the ApiClient, setting the base URL and a session object."""
-        self.base_url = settings.api_base_url
+        if not base_url:
+            raise ValueError("base_url cannot be empty")
+        self.base_url = base_url
         self.session = requests.Session()
 
     def get(self, endpoint: str, params: dict = None) -> Response:
