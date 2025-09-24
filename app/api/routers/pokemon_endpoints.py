@@ -1,10 +1,23 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from app.api.services import pokemon_service
 import json
-from typing import List, Optional
+from typing import List, Optional, Set
 
 router = APIRouter(prefix="/api")
+
+# --- Dependency Functions for Validation ---
+
+async def get_valid_types() -> Set[str]:
+    """Dependency to get a set of all valid Pokémon types."""
+    return set(await pokemon_service.get_all_types())
+
+async def get_valid_generation_ids() -> Set[int]:
+    """Dependency to get a set of all valid Pokémon generation IDs."""
+    generations = await pokemon_service.get_all_generations()
+    return {gen['id'] for gen in generations}
+
+# --- API Endpoints ---
 
 @router.get("/health")
 async def health_check():
@@ -41,10 +54,20 @@ async def stream_pokemons(
     types: Optional[List[str]] = Query(None),
     generation: Optional[int] = Query(None, ge=1),
     pokemon_id: Optional[int] = Query(None, ge=1),
-    pokemon_ids: Optional[List[int]] = Query(None)
+    pokemon_ids: Optional[List[int]] = Query(None),
+    valid_types: Set[str] = Depends(get_valid_types),
+    valid_gen_ids: Set[int] = Depends(get_valid_generation_ids)
 ):
     """
     Streams a paginated list of Pokemon using Server-Sent Events.
     Can be filtered by one or two types.
     """
+    # --- Input Validation ---
+    if types:
+        for t in types:
+            if t.lower() not in valid_types:
+                raise HTTPException(status_code=422, detail=f"Invalid type: '{t}'")
+    if generation and generation not in valid_gen_ids:
+        raise HTTPException(status_code=422, detail=f"Invalid generation: '{generation}'")
+
     return StreamingResponse(sse_generator(page, limit, types, generation, pokemon_id, pokemon_ids), media_type="text/event-stream")

@@ -7,6 +7,8 @@ from cachetools import TTLCache
 # --- Constants ---
 POKEAPI_BASE_URL = "https://pokeapi.co/api/v2"
 
+
+
 # --- Cache Setup ---
 pokemon_cache = TTLCache(maxsize=1024, ttl=3600)
 _all_pokemon_names: List[Dict] = []

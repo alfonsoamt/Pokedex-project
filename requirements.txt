@@ -5,3 +5,7 @@ httpx
 jinja2
 cachetools
 gunicorn
+pytest
+pydantic
+pydantic-settings
+playwright

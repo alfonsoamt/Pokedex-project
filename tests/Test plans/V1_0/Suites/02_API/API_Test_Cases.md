@@ -136,12 +136,13 @@
 </details>
 
 <details>
-<summary>🔴 <strong>TC-A-STR-008: Verify response schema is correct for all valid requests</strong></summary>
+<summary>🔴 <strong>TC-A-STR-008: Verify response schema is correct for all valid requests (Covered by other tests)</strong></summary>
 
 | | |
 | :--- | :--- |
 | **Priority** | 🔴 `Critical` |
 | **Objective** | To ensure the data contract between the backend and any client is strictly maintained, preventing integration issues. |
+| **Note** | *This is a cross-cutting concern, not a standalone test. It is considered `PASSED` if the Pydantic schema validation within tests `TC-A-STR-001` through `TC-A-STR-007` executes successfully for each case.* |
 
 **Request:**
 *   **Method:** `GET`

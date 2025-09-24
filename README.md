@@ -147,3 +147,29 @@ Pokedex-project/
     *   **`tests/api/`**: Holds API-specific tests, API clients (request logic), and Pydantic data models (schema validation).
     *   **`tests/e2e/`**: Contains E2E tests and Page Object Models (`pages/`) for UI interaction.
 *   **`reports/`**: A designated output directory for test reports and artifacts.
+
+### 🚀 Development Progress & Next Steps
+
+This section tracks the ongoing development of the test automation framework.
+
+**✅ Completed Milestones:**
+
+*   **Core Framework Setup:**
+    *   Initialized the core structure, implemented a reusable `ApiClient`, established configuration management, and created a session-scoped `pytest` fixture.
+*   **Initial Contract Tests & Advanced Models:**
+    *   Successfully implemented API Contract Tests for `/api/generations`, establishing a baseline pattern for schema validation with `Pydantic`.
+    *   Handled a complex Server-Sent Event (SSE) stream by implementing a **Pydantic Discriminated Union**, a robust pattern for modern, real-time APIs.
+*   **Full Coverage for Stream Endpoint via Parametrization:**
+    *   **Refactored with `parametrize`:** Replaced a single, monolithic test with a powerful, parameterized test (`test_pokemon_stream_parameterized`) using `pytest.mark.parametrize`.
+    *   **Expanded Positive Coverage:** The new test covers all primary valid scenarios from the test plan (`TC-A-STR-001` to `TC-A-STR-007`), including pagination, all filter types, and fetching by ID(s).
+    *   **Implemented Data Validation:** The test suite now performs deep data assertions, ensuring the *content* of the response is correct based on the request parameters.
+    *   **Added Negative Path Testing:** Created a separate parameterized test (`test_pokemon_stream_invalid_parameters`) to verify that the API correctly rejects invalid inputs with a `422` status code (`TC-A-STR-009`).
+    *   **API Bug Fixes:** This robust testing process uncovered—and led to the fixing of—bugs in the API, which was not correctly validating certain inputs.
+
+**🎯 Next Session Goal:**
+
+With the API test suite now providing robust coverage for the backend, the next major objective is to **begin the implementation of the End-to-End (E2E) test suite using Playwright**. This will shift the focus to validating user workflows directly in the browser.
+
+*   **1. Setup Playwright with Pytest:** Integrate Playwright into the existing `pytest` framework. This will involve creating necessary fixtures and configurations in `conftest.py` to manage the browser lifecycle.
+*   **2. Implement First E2E Test:** Automate a critical E2E test case, such as `TC-E-GRD-001: Verify card content (sprite, name, number, types)`.
+*   **3. Develop Page Object Model (POM):** Begin creating the first Page Object Model for the main Pokedex page. This will abstract away UI selectors and actions, making the tests cleaner and more maintainable, following the proposed architecture in `tests/e2e/pages/`.
