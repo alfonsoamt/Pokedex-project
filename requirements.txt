@@ -9,3 +9,4 @@ pytest
 pydantic
 pydantic-settings
 playwright
+pytest-playwright

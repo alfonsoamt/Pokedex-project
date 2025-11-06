@@ -10,7 +10,14 @@ class BasePage:
 
     def __init__(self, page: Page):
         self.page = page
+        self.body = page.locator("body")
 
-    def navigate(self, path: str = "/"):
-        """Navigates to a specific path. Relies on the `base_url` from playwright.config."""
-        self.page.goto(path)
+
+    def get_title(self) -> str:
+        """Returns the title of the current page."""
+        return self.page.title()
+    
+    def wait_for_url(self, url_pattern: str, **kwargs):
+        """Waits for the page URL to match the given pattern."""
+        self.page.wait_for_url(url_pattern, **kwargs)
+        
